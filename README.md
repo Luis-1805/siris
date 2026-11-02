@@ -33,7 +33,7 @@ named `siris` too (an old `config/iris-dlss.properties` is taken over on the fir
 * [Lunar Client](#lunar-client)
 * [Settings](#settings)
 * [Shader packs (Vitrail)](#shader-packs-vitrail)
-* [VIRIS: Voxy LODs on Vulkan](#viris-voxy-lods-on-vulkan)
+* [Works with](#works-with)
 * [Performance](#performance)
 * [Troubleshooting](#troubleshooting)
 * [Build from source (developers)](#build-from-source-developers)
@@ -155,34 +155,10 @@ Known with Solas 3.8 on Vitrail 0.13.0:
 
 Vitrail's own compatibility table: [docs/compatibility.md](https://github.com/avpbynf/Vitrail-Shaders/blob/main/docs/compatibility.md).
 
-## VIRIS: Voxy LODs on Vulkan
+## Works with
 
-<img src=".github/assets/viris-icon.svg" width="64" height="64" alt="VIRIS icon" align="right">
-
-[Voxy](https://modrinth.com/mod/voxy) only renders through OpenGL and refuses the Vulkan backend.
-**VIRIS** ([`viris/`](viris), on [Modrinth](https://modrinth.com/mod/viris), formerly `voxy-vulkan`) is a separate
-small mod that runs Voxy's own, unchanged renderer on Vulkan: it opens a hidden OpenGL context next to the game's
-Vulkan device, Voxy draws into images both APIs share (GL/Vulkan interop), and the game blends them in before the
-world's terrain. The picture is Voxy's own (textures, lighting, water, fog, SSAO), not an imitation.
-
-* **Without a shader pack: draws like Voxy on OpenGL** (dev world 2026-11-01, day and night compared with
-  Voxy on the OpenGL backend), also with DLSS + Frame Generation and in Lunar Client. Cost at 1080p on a
-  4060 Ti: about 0.7 ms per rendered frame (230 -> 200 rendered fps).
-* **With a shader pack (Vitrail):** packs with Voxy support (`voxy.json` in the pack: Complementary, BSL, Photon,
-  Solas, MakeUp, ...) draw the LODs with their own code, as under Iris. Not yet: shadows on LODs (the pack's
-  shadow maps aren't passed in), packs that render into vanilla depth. The LODs stay after reloading or toggling
-  the pack and after switching Voxy off and on (VIRIS 0.3.1-0.3.3); with SIRIS 1.1.4 they also keep their colour
-  when joining a world again (before, every join after the first showed grey outlines until a pack reload).
-* Works with [Voxy Server Side](https://modrinth.com/plugin/voxy-server-side) (LODs sent by the server): it
-  feeds Voxy's own data, VIRIS only draws.
-* Known: with DLSS upscaling, thin dark lines can show over LOD water.
-* Needs a GPU driver with OpenGL/Vulkan interop (`GL_EXT_memory_object_win32`, `GL_EXT_semaphore_win32`),
-  Windows only. SIRIS is not required, but VIRIS is tested with it.
-
-Install: Voxy 0.2.20-beta (Modrinth, needs Fabric API) and `viris-*.jar` (Modrinth or the
-[releases](https://github.com/laurensanp/siris/releases), experimental) in `mods/`. Remove an old
-`voxy-vulkan-*.jar` (different mod id, both would load). Voxy is All-Rights-Reserved: VIRIS contains none of its
-code and is only built against it.
+[VIRIS](https://github.com/laurensanp/viris) (Voxy LODs on Vulkan): install it next to this mod if you want
+[Voxy](https://modrinth.com/mod/voxy)'s distant terrain. It is not required, and it runs without this mod too.
 
 ## Performance
 
@@ -225,7 +201,6 @@ Everything that is ours is in this repository. What is not ours is downloaded, n
 |---|---|---|
 | NVIDIA DLSS SDK, Vulkan headers | `dlss-bridge/third_party/` | `dlss-bridge/fetch-deps.ps1` (GitHub) |
 | Sodium 0.9.2 jar (compile only) | `libs/sodium-fabric-0.9.2+mc26.3.jar` | [Modrinth](https://modrinth.com/mod/sodium/version/mc26.3-0.9.2-fabric) |
-| Voxy 0.2.20-beta jar (compile only, VIRIS) | `libs/voxy-0.2.20-beta.jar` | [Modrinth](https://modrinth.com/mod/voxy) |
 | Sodium, Fabric API, Vitrail jars (test runs) | `mod/run/mods/` | Modrinth |
 | Shader packs (test runs) | `mod/run/shaderpacks/` | Modrinth (Solas, Complementary, ...) |
 
@@ -241,8 +216,6 @@ build.bat                                                 :: out\siris.dll, out\
 out\dlss_probe.exe                                        :: optional: reports SR / FG support without the game
 cd ..\mod
 gradlew build                                             :: build\libs\siris-*.jar (natives included)
-cd ..\viris
-gradlew build                                             :: build\libs\viris-*.jar (optional)
 ```
 
 ### Test loop
@@ -317,7 +290,6 @@ submit signals a timeline semaphore ──────────────�
 | `mod/.../SodiumOptions.java`, `DlssSettingsScreen.java` | settings (Sodium pages, Mod Menu screen) |
 | `mod/.../ShaderPackTweaks.java`, `mixin/VitrailRenderScaleMixin.java` | Vitrail: pack TAA off, its Render Scale off under DLSS |
 | `mod/.../mixin/` | Vulkan instance/device, command encoder, surface, samplers, backend choice, GameRenderer, Camera, HUD overlay, F3, dev test world |
-| `viris/` | VIRIS: Voxy LODs on Vulkan (separate mod) |
 | `testpacks/` | own test shader packs |
 
 ## Known issues
@@ -328,16 +300,15 @@ submit signals a timeline semaphore ──────────────�
   wWaypoints places its icons with its own FOV math, which can drift slightly against the world away from
   the screen centre (also without DLSS).
 * Joining a world: Vitrail reads and compiles the shader pack a second time so block tags resolve; for packs
-  without block tags (e.g. Solas) the mod skips that second read, which shortens the join hitch. With VIRIS
-  installed it doesn't (the LODs lost their colour on the second join otherwise).
+  without block tags (e.g. Solas) the mod skips that second read, which shortens the join hitch. With
+  [VIRIS](https://github.com/laurensanp/viris) installed it doesn't (its LODs need that read).
 * Motion vectors follow the camera and moving entities (position and body turn, nearest 32), not animated
   parts (legs, heads), water waves or particles: those can smear a little.
-* Voxy LODs (VIRIS) get no shadows from shader packs yet; packs without Voxy support show no LODs.
 * Only Windows + NVIDIA.
 
 ## License
 
-This mod and VIRIS: [MIT](LICENSE). NVIDIA's DLSS runtime files in the jar (`nvngx_dlss.dll`,
+This mod: [MIT](LICENSE). NVIDIA's DLSS runtime files in the jar (`nvngx_dlss.dll`,
 `nvngx_dlssg.dll`) are redistributed under the NVIDIA DLSS SDK license (`NVIDIA_DLSS_LICENSE.txt` in the
-jar); `fetch-deps.ps1` downloads the SDK, it is not part of this repository. Vitrail (LGPL-3.0), Sodium,
-Voxy and shader packs are not included; get them from their authors.
+jar); `fetch-deps.ps1` downloads the SDK, it is not part of this repository. Vitrail (LGPL-3.0), Sodium
+and shader packs are not included; get them from their authors.

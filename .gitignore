@@ -12,9 +12,6 @@ libs/
 *.lib
 *.pdb
 .idea/
-viris/build/
-viris/.gradle/
-viris/run/
 
 # secrets
 .env
