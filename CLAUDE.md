@@ -5,7 +5,7 @@ Resolution + Frame Generation inside the game's own Vulkan renderer (RenderPearl
 **Vitrail** (separate mod, modrinth `vitrail-shaders`, github avpbynf/Vitrail-Shaders, LGPL-3.0, not ours,
 never commit or ship it). `README.md` lists everything a player or developer needs and where it comes from.
 
-Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. Works with **VIRIS** (Voxy LODs on Vulkan), its own repo since 2026-11-02: github.com/laurensanp/viris, local clone `../viris`, notes in its CLAUDE.md. Neither mod needs the other (tested alone 2026-11-02); docs only mention each other as "works with".
+Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. Works with **VIRIS** (Voxy LODs on Vulkan), its own repo since 2026-11-02: github.com/laurensanp/viris, local clone `../viris`, notes in its CLAUDE.md. Neither mod needs the other (tested alone 2026-11-02); docs only mention each other as "works with". Both repos have the same layout (`mod/`, `libs/`, `.github/assets/`) and README sections in the same order: keep them that way.
 
 | Path | What |
 |---|---|
@@ -156,7 +156,7 @@ Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. W
 - Dev `options.txt`: `fullscreen:false` (else a focus change minimizes and caps at 10 fps),
   `inactivityFpsLimit:"minimized"` (else the 30 fps AFK limit hits benchmarks). Run benchmarks with nothing else
   loading the PC (±25 %). Logs written across midnight get lost (log roll), rerun.
-- Test together with VIRIS: move `mod/run/mods-voxy/*` (Voxy, VIRIS' jar from `../viris/build/libs`) into `mod/run/mods`, no shader pack,
+- Test together with VIRIS: move `mod/run/mods-voxy/*` (Voxy, VIRIS' jar from `../viris/mod/build/libs`) into `mod/run/mods`, no shader pack,
   one run at render distance 32 so Voxy ingests, then lower it. `-PtestTicks=400+` (meshing takes seconds).
 - OpenGL reference shot: `enabled=false` in `config/siris.properties` + `preferredGraphicsBackend:"opengl"` in
   `options.txt` (Vitrail: `vitrail/graphics-api.txt`), then restore.

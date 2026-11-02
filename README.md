@@ -54,7 +54,7 @@ Mods, all in `.minecraft/mods/` (or the Lunar profile's `mods/`):
 
 | Mod | Where from | Needed for |
 |---|---|---|
-| `siris-<version>+mc26.3.jar` (this mod, NVIDIA's DLSS files inside) | [Releases](https://github.com/laurensanp/siris/releases) | DLSS SR + FG |
+| `siris-<version>+mc26.3.jar` (this mod, NVIDIA's DLSS files inside) | [Modrinth](https://modrinth.com/mod/siris-dlss) or [Releases](https://github.com/laurensanp/siris/releases) | DLSS SR + FG |
 | [Sodium](https://modrinth.com/mod/sodium) 0.9.x for 26.3 | Modrinth | the settings pages, Vitrail |
 | [Vitrail](https://modrinth.com/mod/vitrail-shaders) for 26.3 (tested: 0.13.0-beta) | Modrinth | shader packs on Vulkan |
 | [Fabric API](https://modrinth.com/mod/fabric-api) | Modrinth | Vitrail |
