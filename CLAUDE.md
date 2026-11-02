@@ -134,8 +134,8 @@ Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. W
   `VulkanCommandEncoder.submitRenderPass`); until 0.7.2 that was worked around with `tools/PatchVitrail.java` (removed 2026-10-31) and a
   local `-lunarfix` Vitrail jar (`../vitrail-dl`, never publish), since 0.7.2 `LunarCompat` does it at runtime.
   Could be reported to Vitrail (use @WrapOperation instead of @Redirect); ask the user first.
-- Current Lunar install (2026-11-02): all three profiles have `siris-1.1.4+mc26.3.jar` (config `preset=m`,
-  `configVersion=2`) + plain `vitrail-0.13.0-beta+mc26.3.jar`; surv and dlss-optimized also `viris-0.3.3+mc26.3.jar`,
+- Current Lunar install (2026-11-02): all three profiles have `siris-1.1.5+mc26.3.jar` (config `preset=m`,
+  `configVersion=2`) + plain `vitrail-0.13.0-beta+mc26.3.jar`; surv and dlss-optimized also `viris-0.3.5+mc26.3.jar`,
   Voxy 0.2.20 and voxy-server-side (surv keeps an old `voxy-vulkan-0.1.0` as `.disabled`). Backups per step in each
   profile's `mods-backup-2026-11-0x-*/`. The user plays DLSS Optimized now (Complementary, render distance 24,
   simulation 32, Custom 80 % + FG x2). `diagnosticRecording=false`; Lunar's active settings profile is `Default`.
