@@ -56,6 +56,8 @@ public final class DlssNative {
     /** Generated frames per rendered frame (1 = 2x ... 3 = 4x), clamped to what the GPU supports. */
     public static native void setGeneratedFrames(int count);
 
+    public static native void setMonitorLimit(boolean limit);
+
     /** Start of the game's frame (before input): low-latency wait for the presenter. */
     public static native void frameStart();
 

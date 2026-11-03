@@ -120,6 +120,7 @@ SIRIS_API int32_t siris_frame_generation_max();
 // Generated frames per rendered frame from the next present on (1 = 2x ... 3 = 4x), clamped to what the
 // device supports.
 SIRIS_API void siris_presenter_set_generated(int32_t count);
+SIRIS_API void siris_presenter_set_monitor_limit(int32_t limit);
 
 // Start of the game's frame, before it reads input: waits until the presenter took the previous
 // frame and, with VSync, until this frame can be finished just in time (keeps latency low).
@@ -144,5 +145,5 @@ SIRIS_API void siris_debug_capture(int32_t frames, const wchar_t* dir);
 // game renders per second, [4] = mean time between shown frames (ms), [5] = its standard deviation
 // (ms), [6] = the longest gap (ms), [7] = latency from siris_present to the real frame's present (ms),
 // [8] = 1% low of shown frames over the last 5 seconds (fps).
-enum { SIRIS_STATS_COUNT = 9 };
+enum { SIRIS_STATS_COUNT = 11 };
 SIRIS_API void siris_presenter_stats(float stats[SIRIS_STATS_COUNT]);

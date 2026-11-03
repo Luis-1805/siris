@@ -828,6 +828,10 @@ struct Timing {
     uint32_t intervals = 0;
     double latencySum = 0.0;
     uint32_t latencies = 0;
+    // How far each shown frame's time step is from the time step of the moment it pictures.
+    double lastContent = 0.0;
+    double judderSqSum = 0.0;
+    uint32_t judders = 0;
 };
 
 struct Presenter {
@@ -852,7 +856,8 @@ struct Presenter {
     VkSemaphore acquired[kBlitCount]{};
     bool blitInFlight[kBlitCount]{};
     int nextBlit = 0;
-    HANDLE timer = nullptr;
+    HANDLE timer = nullptr;       // presenter thread
+    HANDLE frameTimer = nullptr;  // render thread: one timer shared by two waiters stalls each up to 50 ms
 
     std::thread thread;
     std::mutex mutex;
@@ -862,6 +867,7 @@ struct Presenter {
     std::atomic<bool> recreate{false};
     std::atomic<bool> vsync{true};
     std::atomic<bool> threadFailed{false};
+    std::atomic<bool> threadDone{false};
     std::string threadError;
 
     // Frame generation (render thread).
@@ -890,6 +896,12 @@ struct Presenter {
     std::deque<std::pair<double, double>> lowIntervals;  // (shown at, interval)
     std::atomic<float> lowFps{0.0f};
     uint64_t presentId = 0;  // last VkPresentIdKHR (presenter thread)
+    // Present wait that never comes back (seen as a few fps otherwise): the presenter stops relying on it.
+    int presentWaitMisses = 0;
+    std::atomic<bool> presentWaitStuck{false};
+    std::atomic<float> judderMs{0.0f};
+    double previousStart = 0.0;  // frame start of the previous job (presenter thread)
+    std::atomic<bool> monitorLimit{false};
 
     // Frame start pacing (low latency): when the presenter last took a job, how long a presenter
     // cycle and a game frame take.
@@ -1138,11 +1150,17 @@ int takeBlitSlot() {
     return index;
 }
 
-// One more frame reached the screen (or the present queue, without present wait).
-void markShown(double shown) {
+// One more frame reached the screen (or the present queue, without present wait). content: the moment it
+// pictures, 0 if unknown.
+void markShown(double shown, double content) {
     Timing& timing = g_present.timing;
     if (timing.lastShow > 0.0) {
         double interval = shown - timing.lastShow;
+        if (content > 0.0 && timing.lastContent > 0.0) {
+            double judder = interval - (content - timing.lastContent);
+            timing.judderSqSum += judder * judder;
+            timing.judders++;
+        }
         timing.intervalSum += interval;
         timing.intervalSqSum += interval * interval;
         timing.intervalMax = interval > timing.intervalMax ? interval : timing.intervalMax;
@@ -1154,11 +1172,16 @@ void markShown(double shown) {
         }
     }
     timing.lastShow = shown;
+    timing.lastContent = content;
+}
+
+bool usePresentWait() {
+    return g_vk.presentWait && !g_present.presentWaitStuck;
 }
 
 // Blits source to the next swapchain image once the game's submission reached `ready`. Returns the
 // present id to wait for (0 if nothing was presented or present wait is unavailable).
-uint64_t showImage(const LocalImage& source, uint64_t ready) {
+uint64_t showImage(const LocalImage& source, uint64_t ready, double content) {
     if (g_present.recreate.exchange(false) || !g_present.swapchain) {
         std::string error;
         if (!createSwapchain(error)) {
@@ -1171,8 +1194,12 @@ uint64_t showImage(const LocalImage& source, uint64_t ready) {
     }
     int b = takeBlitSlot();
     uint32_t index = 0;
-    VkResult result = g_vk.acquireNextImage(g_vk.device, g_present.swapchain, UINT64_MAX, g_present.acquired[b],
+    // Not forever: the render thread and shutdown wait for this thread. No image in time = this frame isn't shown.
+    VkResult result = g_vk.acquireNextImage(g_vk.device, g_present.swapchain, 100'000'000ull, g_present.acquired[b],
         VK_NULL_HANDLE, &index);
+    if (result == VK_TIMEOUT || result == VK_NOT_READY) {
+        return 0;
+    }
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
         g_present.recreate = true;
         return 0;
@@ -1241,8 +1268,8 @@ uint64_t showImage(const LocalImage& source, uint64_t ready) {
         g_present.recreate = true;
     }
     g_present.shownCount++;
-    if (!g_vk.presentWait) {
-        markShown(now());
+    if (!usePresentWait()) {
+        markShown(now(), content);
         return 0;
     }
     return id;
@@ -1250,14 +1277,15 @@ uint64_t showImage(const LocalImage& source, uint64_t ready) {
 
 // Presenter thread: until the frame with this present id is on screen. False if it never got there
 // in time (swapchain gone, presenter stopping).
-bool waitDisplayed(uint64_t id) {
+bool waitDisplayed(uint64_t id, double content) {
     if (id == 0 || !g_present.swapchain) {
         return false;
     }
     for (int attempt = 0; attempt < 10; attempt++) {
         VkResult result = g_vk.waitForPresent(g_vk.device, g_present.swapchain, id, 20'000'000ull);
         if (result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR) {
-            markShown(now());
+            g_present.presentWaitMisses = 0;
+            markShown(now(), content);
             return true;
         }
         if (result != VK_TIMEOUT) {
@@ -1267,6 +1295,9 @@ bool waitDisplayed(uint64_t id) {
         if (g_present.stop) {
             return false;
         }
+    }
+    if (++g_present.presentWaitMisses >= 3) {
+        g_present.presentWaitStuck = true;
     }
     return false;
 }
@@ -1288,6 +1319,9 @@ void recordLatency(double queued) {
             g_present.jitterMs = static_cast<float>(std::sqrt(variance > 0.0 ? variance : 0.0) * 1000.0);
             g_present.worstMs = static_cast<float>(timing.intervalMax * 1000.0);
         }
+        if (timing.judders > 0) {
+            g_present.judderMs = static_cast<float>(std::sqrt(timing.judderSqSum / timing.judders) * 1000.0);
+        }
         g_present.latencyMs = static_cast<float>(timing.latencySum / timing.latencies * 1000.0);
         // 1% low: the mean of the slowest 1% of intervals (at least one) as frames per second.
         std::vector<double> intervals;
@@ -1304,8 +1338,10 @@ void recordLatency(double queued) {
             g_present.lowFps = sum > 0.0 ? static_cast<float>(count / sum) : 0.0f;
         }
         double lastShow = timing.lastShow;
+        double lastContent = timing.lastContent;
         timing = Timing{};
         timing.lastShow = lastShow;
+        timing.lastContent = lastContent;
         timing.windowStart = t;
     }
 }
@@ -1342,16 +1378,16 @@ bool waitRendered(uint64_t value) {
     }
 }
 
-void sleepUntil(double target) {
+void sleepUntil(double target, HANDLE timer) {
     double remaining = target - now();
     if (remaining <= 0.0) {
         return;
     }
-    if (g_present.timer && remaining > 0.0005) {
+    if (timer && remaining > 0.0005) {
         LARGE_INTEGER due;
         due.QuadPart = -static_cast<LONGLONG>((remaining - 0.0003) * 1e7);
-        if (SetWaitableTimer(g_present.timer, &due, 0, nullptr, nullptr, FALSE)) {
-            WaitForSingleObject(g_present.timer, 50);
+        if (SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE)) {
+            WaitForSingleObject(timer, 50);
         }
     }
     while (now() < target) {
@@ -1382,21 +1418,28 @@ void presenterLoop() {
         // refresh / (generated + 1) and then pause until its next frame.
         // Without VSync the game has its next frame queued almost always; the real frame used to go out
         // right after the generated one then (as if the presenter were behind), 2 ms / 7 ms at 2x. It now
-        // always waits for its slot, a little short of it so the presenter keeps up with the game.
+        // always waits for its slot, a little short of it so the presenter keeps up with the game (under the
+        // monitor limit the game has room to spare, its frames come at a steady rate).
         bool shown = waitRendered(job.value);
-        double start = now();
-        double spacing = g_present.frameInterval.load() / (job.generated + 1);
+        double ready = now();
+        double interval = g_present.frameInterval.load();
+        double spacing = interval / (job.generated + 1);
+        double span = job.started - g_present.previousStart;
+        span = span <= 0.0 ? interval : span > interval * 2.0 ? interval * 2.0 : span;
+        bool hasMoments = job.started > 0.0 && g_present.previousStart > 0.0;
+        g_present.previousStart = job.started;
         for (int i = 0; shown && i <= job.generated; i++) {
+            double content = !hasMoments ? 0.0 : job.started - span + span * (i + 1) / (job.generated + 1);
             if (i > 0) {
-                sleepUntil(start + spacing * i * 0.9);
+                sleepUntil(ready + spacing * i * (g_present.monitorLimit ? 0.98 : 0.9), g_present.timer);
             }
             bool real = i == job.generated;
-            uint64_t id = showImage(real ? slot.real : slot.interp[i], job.value);
+            uint64_t id = showImage(real ? slot.real : slot.interp[i], job.value, content);
             if (!real) {
                 g_present.generatedCount++;
             }
-            if (g_vk.presentWait) {
-                waitDisplayed(id);  // without VSync: timing only, returns right away
+            if (usePresentWait()) {
+                waitDisplayed(id, content);  // without VSync: timing only, returns right away
             }
         }
         if (shown) {
@@ -1409,6 +1452,7 @@ void presenterLoop() {
         }
         g_present.cv.notify_all();
     }
+    g_present.threadDone = true;
 }
 
 // ---- Debug capture: the real and generated frames of a few presented frames as PNG files ----------
@@ -1685,6 +1729,28 @@ bool ensureFrameGeneration(VkCommandBuffer cmd) {
     return true;
 }
 
+// Render thread, waiting for the presenter thread. The child window belongs to this thread and a present can
+// need it (messages sent to the window); answering those here keeps the two from waiting for each other.
+void pumpSentMessages() {
+    MSG message;
+    PeekMessageW(&message, nullptr, 0, 0, PM_NOREMOVE | PM_QS_SENDMESSAGE);
+}
+
+template <typename Predicate>
+bool waitPumping(std::unique_lock<std::mutex>& lock, double seconds, Predicate done) {
+    double end = now() + seconds;
+    while (!done()) {
+        if (now() >= end) {
+            return false;
+        }
+        g_present.cv.wait_for(lock, std::chrono::milliseconds(2));
+        lock.unlock();
+        pumpSentMessages();
+        lock.lock();
+    }
+    return true;
+}
+
 }  // namespace
 
 SIRIS_API void siris_presenter_destroy() {
@@ -1701,6 +1767,10 @@ SIRIS_API void siris_presenter_destroy() {
         }
         g_present.cv.notify_all();
         if (g_present.thread.joinable()) {
+            while (!g_present.threadDone) {
+                pumpSentMessages();
+                Sleep(1);
+            }
             g_present.thread.join();
         }
     }
@@ -1752,6 +1822,11 @@ SIRIS_API void siris_presenter_destroy() {
     }
     g_present.timelineValue = 0;
     g_present.presentId = 0;
+    g_present.presentWaitMisses = 0;
+    g_present.presentWaitStuck = false;
+    g_present.judderMs = 0.0f;
+    g_present.previousStart = 0.0;
+    g_present.threadDone = false;
     g_present.lastTake = 0.0;
     g_present.frameStart = 0.0;
     g_present.renderTime = 0.0;
@@ -1763,6 +1838,10 @@ SIRIS_API void siris_presenter_destroy() {
     if (g_present.timer) {
         CloseHandle(g_present.timer);
         g_present.timer = nullptr;
+    }
+    if (g_present.frameTimer) {
+        CloseHandle(g_present.frameTimer);
+        g_present.frameTimer = nullptr;
     }
     if (g_present.window) {
         DestroyWindow(g_present.window);
@@ -1837,6 +1916,8 @@ SIRIS_API int32_t siris_presenter_create(uint64_t parentHwnd, uint32_t width, ui
     }
     g_present.timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
         TIMER_ALL_ACCESS);
+    g_present.frameTimer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
+        TIMER_ALL_ACCESS);
 
     std::string error;
     if (!createSwapchain(error) && !error.empty()) {
@@ -1857,8 +1938,7 @@ SIRIS_API void siris_presenter_frame_start() {
     // 1. Nothing may wait in the queue: the presenter takes the previous frame first.
     {
         std::unique_lock<std::mutex> lock(g_present.mutex);
-        g_present.cv.wait_for(lock, std::chrono::milliseconds(100),
-            [] { return g_present.stop || g_present.jobs.empty() || g_present.threadFailed; });
+        waitPumping(lock, 0.1, [] { return g_present.stop || g_present.jobs.empty() || g_present.threadFailed; });
     }
     // 2. With VSync the presenter needs the next frame after the one it took is on screen: one
     // refresh per shown frame, generated ones included. Start this one so it is done just in time
@@ -1870,10 +1950,22 @@ SIRIS_API void siris_presenter_frame_start() {
         double target = g_present.lastTake.load() + cycle - render * 1.1 - 0.002;
         double wait = target - now();
         if (wait > 0.0 && wait < 0.05) {
-            sleepUntil(target);
+            sleepUntil(target, g_present.frameTimer);
         }
     }
+    // 3. Frame generation without VSync: shown frames stay just under the refresh rate, by Reflex's formula.
+    // More of them only tear (each present replaces the picture mid-scan), and the game gets less to queue.
+    if (g_present.monitorLimit && !g_present.vsync && refresh > 0.0 && g_present.lastGenerated.load() > 0
+        && g_present.frameStart > 0.0) {
+        double hz = 1.0 / refresh;
+        sleepUntil(g_present.frameStart + (1 + g_present.lastGenerated.load()) / (hz - hz * hz / 3600.0),
+            g_present.frameTimer);
+    }
     g_present.frameStart = now();
+}
+
+SIRIS_API void siris_presenter_set_monitor_limit(int32_t limit) {
+    g_present.monitorLimit = limit != 0;
 }
 
 SIRIS_API void siris_presenter_set_vsync(int32_t vsync) {
@@ -1935,7 +2027,10 @@ SIRIS_API int32_t siris_present(uint64_t commandBuffer, const SirisImage* frame,
     PresentSlot& slot = g_present.slots[slotIndex];
     {
         std::unique_lock<std::mutex> lock(g_present.mutex);
-        g_present.cv.wait(lock, [&] { return !slot.busy; });
+        // A frame this late means the presenter is stuck: the game goes back to its own swapchain instead of hanging.
+        if (!waitPumping(lock, 5.0, [&] { return !slot.busy; })) {
+            return fail(SIRIS_DEVICE_FAILED, "the presenter took no frame for 5 s");
+        }
     }
 
     auto cmd = reinterpret_cast<VkCommandBuffer>(commandBuffer);
@@ -2103,6 +2198,8 @@ SIRIS_API void siris_presenter_stats(float stats[SIRIS_STATS_COUNT]) {
     stats[6] = g_present.worstMs;
     stats[7] = g_present.latencyMs;
     stats[8] = g_present.lowFps;
+    stats[9] = g_present.judderMs;
+    stats[10] = g_present.presentWaitStuck ? 1.0f : 0.0f;
 }
 
 SIRIS_API void siris_shutdown() {

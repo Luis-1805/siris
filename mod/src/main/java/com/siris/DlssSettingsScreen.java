@@ -81,6 +81,8 @@ public class DlssSettingsScreen extends Screen {
         add(cycle("Generated frames", fgModes.toArray(new DlssConfig.FrameGenMode[0]), DlssConfig.frameGenMode,
             m -> m.label, SodiumOptions::frameGenTooltip, value -> DlssConfig.frameGenMode = value),
             dlss && DlssConfig.vulkanPresent && DlssConfig.frameGeneration && fgModes.size() > 1);
+        add(toggle("Limit to monitor", DlssConfig.fgMonitorLimit, SodiumOptions.FG_MONITOR_LIMIT_TOOLTIP,
+            value -> DlssConfig.fgMonitorLimit = value), dlss && DlssConfig.vulkanPresent && DlssConfig.frameGeneration);
         add(toggle("DLSS presenter", DlssConfig.vulkanPresent, "Show frames through the DLSS presenter's own "
             + "swapchain (needed for Frame Generation, paces frames for lower latency).", value -> {
                 DlssConfig.vulkanPresent = value;

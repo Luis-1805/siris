@@ -124,6 +124,15 @@ public class SodiumOptions implements ConfigEntryPoint {
                         .setElementNameProvider(m -> text(m.label))
                         .setBinding(value -> DlssConfig.frameGenMode = value, () -> DlssConfig.frameGenMode)
                         .setStorageHandler(DlssConfig::save))
+                    .addOption(builder.createBooleanOption(id("fg_monitor_limit"))
+                        .setName(text("Limit to monitor"))
+                        .setTooltip(text(FG_MONITOR_LIMIT_TOOLTIP))
+                        .setImpact(OptionImpact.LOW)
+                        .setDefaultValue(false)
+                        .setEnabledProvider(state -> dlssOn(state) && state.readBooleanOption(PRESENTER)
+                            && state.readBooleanOption(FRAME_GENERATION), ENABLED, PRESENTER, FRAME_GENERATION)
+                        .setBinding(value -> DlssConfig.fgMonitorLimit = value, () -> DlssConfig.fgMonitorLimit)
+                        .setStorageHandler(DlssConfig::save))
                     .addOption(builder.createBooleanOption(PRESENTER)
                         .setName(text("DLSS presenter"))
                         .setTooltip(text("Show frames through the DLSS presenter's own swapchain instead of the "
@@ -200,6 +209,10 @@ public class SodiumOptions implements ConfigEntryPoint {
             case CUSTOM -> "Custom: set the render resolution yourself (slider below).";
         });
     }
+
+    static final String FG_MONITOR_LIMIT_TOOLTIP = "Without VSync: keeps the frames shown just under the monitor's "
+        + "refresh rate, like Reflex with G-Sync. More frames than the monitor shows only tear, which looks like shaking "
+        + "blocks when the mouse moves fast. The game renders fewer frames then.";
 
     static Component frameGenTooltip(DlssConfig.FrameGenMode mode) {
         String text = switch (mode) {

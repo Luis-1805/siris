@@ -152,6 +152,8 @@ public final class DlssConfig {
     public static boolean vulkanPresent = true;
     /** DLSS Frame Generation: one generated frame between two rendered ones. */
     public static boolean frameGeneration = true;
+    /** Without VSync: shown fps stay just under the monitor's refresh rate (like Reflex with G-Sync). */
+    public static boolean fgMonitorLimit = false;
     /** Frames shown per rendered frame with Frame Generation; the presenter clamps it to what the GPU supports. */
     public static FrameGenMode frameGenMode = FrameGenMode.X2;
     /** Contrast-adaptive sharpening after DLSS, 0..1. */
@@ -227,6 +229,7 @@ public final class DlssConfig {
         jitterSignY = parseFloat(p.getProperty("jitterSignY"), 1.0F);
         vulkanPresent = Boolean.parseBoolean(p.getProperty("vulkanPresent", "true"));
         frameGeneration = Boolean.parseBoolean(p.getProperty("frameGeneration", "true"));
+        fgMonitorLimit = Boolean.parseBoolean(p.getProperty("fgMonitorLimit", "false"));
         frameGenMode = parse(FrameGenMode.values(), p.getProperty("frameGenMultiplier"), FrameGenMode.X2);
         sharpness = Math.max(0.0F, Math.min(1.0F, parseFloat(p.getProperty("sharpness"), 0.35F)));
         renderScale = Math.max(33, Math.min(100, Math.round(parseFloat(p.getProperty("renderScale"), 67.0F))));
@@ -255,6 +258,7 @@ public final class DlssConfig {
             writer.write("jitterSignY=" + jitterSignY + "\n");
             writer.write("vulkanPresent=" + vulkanPresent + "\n");
             writer.write("frameGeneration=" + frameGeneration + "\n");
+            writer.write("fgMonitorLimit=" + fgMonitorLimit + "\n");
             writer.write("# 2 | 3 | 4 (3 and 4 need an RTX 50 card)\n");
             writer.write("frameGenMultiplier=" + frameGenMode.key + "\n");
             writer.write("sharpness=" + sharpness + "\n");

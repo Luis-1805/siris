@@ -23,7 +23,7 @@ public final class VulkanPresenter {
     private static int height;
     private static boolean vsync = true;
     private static long timeline;
-    private static float[] stats = new float[9];
+    private static float[] stats = new float[11];
     private static long lastStatsTime;
     private static long lastLogTime;
     private static boolean appliedFrameGeneration;
@@ -91,6 +91,7 @@ public final class VulkanPresenter {
         float[] fg = null;
         if (DlssConfig.frameGeneration) {
             DlssNative.setGeneratedFrames(DlssConfig.frameGenMode.factor - 1);
+            DlssNative.setMonitorLimit(DlssConfig.fgMonitorLimit);
             fg = DlssUpscaler.takeFrameGenParams();
             fgImages = fg != null ? DlssUpscaler.frameGenImages() : null;
         }
@@ -258,7 +259,8 @@ public final class VulkanPresenter {
         String fg = !DlssConfig.frameGeneration ? "Frame Generation off"
             : stats[1] > 0 ? "Frame Generation x" + Math.round(stats[1]) : "Frame Generation idle";
         return String.format("Output: presenter %s, %.0f fps shown (1%% low %.0f), %.0f rendered (1%% low %.0f), %s, "
-            + "pacing %.1f±%.1f ms (worst %.1f), latency %.1f ms", vsync ? "VSync" : "no VSync", stats[0], stats[8],
-            stats[3], FrameStats.renderedLow(), fg, stats[4], stats[5], stats[6], stats[7]);
+            + "pacing %.1f±%.1f ms (worst %.1f), motion judder %.2f ms, latency %.1f ms%s", vsync ? "VSync" : "no VSync",
+            stats[0], stats[8], stats[3], FrameStats.renderedLow(), fg, stats[4], stats[5], stats[6], stats[9], stats[7],
+            stats[10] != 0.0F ? ", present wait stuck" : "");
     }
 }

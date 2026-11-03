@@ -15,7 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * Vitrail reads, translates and compiles the whole pack a second time when a world is joined, only so
  * that block tags in block.properties can resolve against the world's registries. For a pack without
  * tags (Solas) that is a 1-2 s hitch for nothing (Lunar logs it as "Pause - Unknown"): when the
- * registry stamp is the only reason, and the pack names no tag, the pack is marked current instead.
+ * registry stamp is the only reason, and the pack names no tag, the pack is marked current instead,
+ * from the second join on (the first read is needed for the entity programs, see below).
  * A dimension change, Distant Horizons or a resource pack material change still reload, and so does every
  * join with VIRIS installed: without the reload the pack's Voxy LODs lost their colour on the second join
  * (grey outlines until the pack was reloaded). Only applied when Vitrail is installed; reflection because
@@ -40,6 +41,8 @@ public class VitrailJoinReloadMixin {
     @Unique
     private static boolean siris$logged;
     @Unique
+    private static boolean siris$entityFormatRead;
+    @Unique
     private static final boolean VIRIS = net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("viris");
 
     @Inject(method = "reloadIfTheWorldMoved", at = @At("HEAD"), cancellable = true, require = 0, remap = false)
@@ -61,6 +64,12 @@ public class VitrailJoinReloadMixin {
             if (!(boolean) siris$stale.invoke(null) || (boolean) siris$moved.invoke(null)
                 || (boolean) siris$distantMoved.invoke(null) || (boolean) siris$formatMoved.invoke(null)
                 || ShaderPackTweaks.selectedPackUsesBlockTags(gameDirectory)) {
+                return;
+            }
+            if (!siris$entityFormatRead) {
+                // The read at startup comes before the entity mesh carries Vitrail's wider format and
+                // leaves no entity programs: without this read mobs and the hand keep the game's shader.
+                siris$entityFormatRead = true;
                 return;
             }
             siris$settle.invoke(null);

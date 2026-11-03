@@ -123,6 +123,10 @@ JNIEXPORT void JNICALL Java_com_siris_DlssNative_setGeneratedFrames(JNIEnv*, jcl
     siris_presenter_set_generated(count);
 }
 
+JNIEXPORT void JNICALL Java_com_siris_DlssNative_setMonitorLimit(JNIEnv*, jclass, jboolean limit) {
+    siris_presenter_set_monitor_limit(limit ? 1 : 0);
+}
+
 JNIEXPORT void JNICALL Java_com_siris_DlssNative_frameStart(JNIEnv*, jclass) {
     siris_presenter_frame_start();
 }
