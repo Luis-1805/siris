@@ -252,6 +252,7 @@ Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. W
 - Benchmark costs (4060 Ti, 1080p): DLSS SR preset K ~2 ms, FG ~3 ms per rendered frame; E ~1 ms cheaper than K,
   L ~1.8 ms more, M ~0.9 ms more at Performance. Mode Custom (33-100 %) uses the closest NGX mode. Render-thread
   time goes to waiting in RenderPearl's `submit` (GPU-bound) and the presenter's `frameStart`.
+- Settings benchmark for `DLSS Optimized` (2026-11-03, dev, 1080p, its mods and settings, Unbound, RD 12, Voxy, FG x2, Quality, M, no VSync, y 110 static, 5 samples of 10 s, rendered fps): baseline 4 runs + 1 89-92, 1 % low 60-65. Inside the noise: shadowdistance 8, SHADOW_QUALITY 1, CLOUD_QUALITY 1, DETAIL_QUALITY 0, SSAO off, Voxy distance 12, only the base mods (Lunar's other mods cost nothing measurable). WATER_REFLECT_QUALITY 1: 95-97, but water loses terrain reflections (visible). DLSS Performance only 99-104, FG off 117 (GPU 94-99 %), so resolution isn't the main cost. Nothing applied: no look-neutral gain. Not measured: moving camera, chunk loading, servers. shadowres75 run had 3 samples at 60 (loading or a hitch): rerun before reading anything into it.
 - Settings UI: Sodium pages "Settings"/"Advanced" (`SodiumOptions`) and Mod Menu screen (`DlssSettingsScreen`);
   overlay in the HUD (`HudMixin`). Screenshot them with `-PdlssScreen=mod|sodium|sodium2` (`DevScreens`).
 - Multi frame generation: 2x/3x/4x (`frameGenMultiplier`), limited to the GPU's `DLSSG.MultiFrameCountMax`
