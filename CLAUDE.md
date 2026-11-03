@@ -47,7 +47,31 @@ Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. W
 - Vitrail drops the whole pack when one program doesn't compile (it doesn't remove unused functions like Iris):
   Solas with `SSAO=false` (deferred1, colortex5) or `DOF=true`+`BLOOM=false` (composite14,
   gbufferProjectionInverse). Log: `(Vitrail) <program> did not compile, nothing of this pack will be drawn`.
-  Vitrail's hand is too bright at night. Could be reported upstream (ask the user first).
+  Could be reported upstream (ask the user first).
+- **Bright mobs and hand at night with Solas (fixed 2026-11-03, was ours):** Vitrail's first pack read comes before the
+  entity mesh carries its wider format, so it leaves no entity programs (log: `The game draws the cutout with
+  VertexFormat[...] and this engine decodes ...`, `went back to the game's own shader`); the join reload repairs it, and
+  `VitrailJoinReloadMixin` skipped that reload for tagless packs. Mobs were drawn by the game's shader, lit by its
+  lightmap (lavender at night), without shadows. Now the first join always reloads, later ones skip. Packs with block
+  tags and setups with VIRIS always reloaded, so they never had this: the user's report with VIRIS installed isn't
+  explained by this alone, recheck in Lunar.
+- RTX 3060 "stuck in the main menu, no clicks" (friend's report 2026-11-03, no log, went away without the mods): not
+  reproduced, cause unknown; FG can't be it (no FG inputs in the menu, so the path there is the same on every GPU), and
+  clicks through the presenter work here (dev: click on Quit Game closes the game). Hardened what could hang the render
+  thread: slot wait 5 s then `presenter took no frame` -> game's swapchain (tested with a forced stall), render thread
+  answers messages sent to the child window while it waits, also at shutdown (`pumpSentMessages`; probably the old
+  watchdog crash in `destroyPresenter`), acquire 100 ms instead of forever, present wait dropped after 3 timeouts (each
+  cost 200 ms; status line says `present wait stuck`). Need that friend's `latest.log` to know more.
+- FG pacing without VSync (2026-11-03): status line has `motion judder` (rms of shown interval minus the time step of the
+  moment a frame pictures; frame starts, generated frames evenly between). Dev x2: 1.4-1.7 ms; simulated x4 (repeated
+  images): 0.8-1.0 ms. Tried a third pacer, present at moment + delay (rising with the slowest frame, as FSR 3 does):
+  x2 0.7-0.9 ms but rendered 121 -> 110, latency +2 ms, x4 worse (1.0-1.1 ms); capped at 1.9 frames 1.0-1.3 ms, same fps
+  loss; spacing by each frame's real length instead of the average: 1.7-2.0 ms. All dropped: don't retry. Bug found on
+  the way: both threads shared one waitable timer, each stalled the other up to 50 ms (VSync path); now one each. New
+  option "Limit to monitor" (`fgMonitorLimit`, default off): shown fps at refresh - refresh^2/3600 like Reflex. Not judged
+  on a real monitor yet: the 2026-11-03 tests ran on a virtual display (1842x1036, 60 Hz, user away), where VSync gives 13 fps
+  with the game's own swapchain too. Next: user compares it and VSync at 165 Hz (270 shown on 165 Hz tear, suspected main
+  cause of "blocks jitter on fast mouse").
 - Benchmark 2026-10-27, 1080p, Solas, render distance 8, static view, 4060 Ti, rendered fps: SR+FG 122 (245 shown),
   Quality 176, Performance 217, DLAA 123, off 146 (old fork in the same scene: 115/161/196/114/133).
 - **Solved (2026-10-27):** in Lunar the FPS dropped after some playtime and recovers later (old fork build and Vitrail alike).
