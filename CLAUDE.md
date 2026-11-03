@@ -274,7 +274,7 @@ waiting for review. New version: POST /v2/version multipart (`data` JSON + `file
 Gallery: 6 images.
 
 Newest first:
-- v1.1.6 (2026-11-03, Latest): mobs keep the pack shader, presenter hardening, Limit to monitor. Modrinth MODRINTH_ID_SIRIS.
+- v1.1.6 (2026-11-03, Latest): mobs keep the pack shader, presenter hardening, Limit to monitor. Modrinth pAtgPLdr.
 - v1.1.5 (2026-11-02): VIRIS split off, links and notes only; no change in the game. Modrinth oaAeAt6U.
 - v1.1.4 (2026-11-02): LODs keep colour on rejoin (join-reload skip off with VIRIS). Modrinth j6taTT1r.
 - v1.1.3 (2026-11-01): DLSS model M by default (K's grid over pack noise). Modrinth 4vXqzP0M.
