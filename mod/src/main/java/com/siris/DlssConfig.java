@@ -56,7 +56,7 @@ public final class DlssConfig {
      * fog) into a fine grid of dashes, M and E don't.
      */
     public enum Preset {
-        M(13, "M (Transformer 2, best)", "m"),
+        M(13, "M (Transformer 2, default)", "m"),
         K(11, "K (Transformer)", "k"),
         L(12, "L (Transformer 2)", "l"),
         J(10, "J (Transformer, less ghosting)", "j"),

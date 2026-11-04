@@ -202,7 +202,7 @@ public class SodiumOptions implements ConfigEntryPoint {
     static Component qualityTooltip(DlssConfig.Quality quality) {
         return text(switch (quality) {
             case DLAA -> "DLAA: full resolution, DLSS only anti-aliases. Sharpest, slowest.";
-            case QUALITY -> "Quality: 67 % render resolution. Best balance.";
+            case QUALITY -> "Quality: 67 % render resolution. The default.";
             case BALANCED -> "Balanced: 58 % render resolution.";
             case PERFORMANCE -> "Performance: 50 % render resolution.";
             case ULTRA_PERFORMANCE -> "Ultra Performance: 33 % render resolution, for very high output resolutions.";

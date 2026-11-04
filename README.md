@@ -4,7 +4,7 @@
 
 # SIRIS
 
-**Redefining Minecraft Rendering.**
+**DLSS and shader packs on Minecraft's Vulkan renderer.**
 
 ![Vulkan](https://img.shields.io/badge/Vulkan-FF6A3D?logo=vulkan&logoColor=white)
 ![DLSS](https://img.shields.io/badge/DLSS-Super%20Resolution-FF6A3D)
@@ -22,9 +22,9 @@ game's own Vulkan renderer, together with **shader packs on Vulkan** through
 Status: **experimental**, personal project, Windows + NVIDIA only. Tested on an RTX 4060 Ti (driver 617,
 Windows 11) with Solas 3.8. Bug reports welcome in the [issues](https://github.com/laurensanp/siris/issues).
 
-The project was called *Iris DLSS Bridge* (`iris-dlss`), then *PYRAXIS*; jar, config file and log lines are now
-named `siris` too (an old `config/iris-dlss.properties` is taken over on the first start). Until 0.6.0 shader packs ran through an own Vulkan port of Iris
-([iris-vulkan](https://github.com/laurensanp/iris-vulkan), archived); Vitrail replaces it.
+Earlier names: *Iris DLSS Bridge* (`iris-dlss`) and *PYRAXIS*. The jar, config file and log lines are now named
+`siris` too, and the first start takes over an old `config/iris-dlss.properties`. Until 0.6.0 shader packs ran through
+our Vulkan port of Iris ([iris-vulkan](https://github.com/laurensanp/iris-vulkan), archived); Vitrail replaced it.
 
 ## Contents
 
@@ -127,7 +127,7 @@ apply immediately.
 | DLSS presenter | Shows frames through its own swapchain (needed for Frame Generation, paces frames for low latency) |
 | Performance overlay | Off / FPS / Detailed, in the top left corner: fps shown and rendered, each with its 1 % low (last five seconds) |
 | Advanced: Texture LOD bias | Sharper distant textures at lower render resolutions (after a restart) |
-| Advanced: Turn off shader pack TAA | Switches the pack's own TAA off (it blurs and jitters on top of DLSS), also for a pack that is switched on later in game. With Vitrail, the pack's noise (shadows, AO, volumetric light, reflections) still changes every frame as with its TAA, so DLSS smooths it instead of showing a fixed, crawling pattern |
+| Advanced: Turn off shader pack TAA | Switches the pack's own TAA off (it blurs and jitters on top of DLSS), also for a pack switched on later in game. With Vitrail, the pack's noise (shadows, AO, volumetric light, reflections) keeps changing every frame, and DLSS smooths it; a fixed noise pattern would crawl |
 | Advanced: Hand distance, Jitter direction | Troubleshooting |
 
 F3 also shows two DLSS lines: render size → output size, and shown / rendered fps, pacing, latency.
@@ -170,11 +170,9 @@ Generation), 2026-10-27:
 |---|---|---|---|---|
 | ~146 | ~123 | ~176 | ~217 | ~122 (~245 shown) |
 
-That is 5–10 % more than the old Iris fork in the same scene. The game is GPU-bound here; DLSS itself costs
-~2 ms per frame at 1080p with model K (M, the default since 1.1.3, ~1 ms more; E ~1 ms cheaper, L ~1.8 ms more),
-Frame Generation ~3 ms per
-rendered frame. A lower render distance helps a lot. Numbers vary with the scene and with whatever else
-runs on the PC.
+That is 5–10 % more than the old Iris fork in the same scene. The game is GPU-bound here. DLSS costs ~2 ms per frame
+at 1080p with model K (M, the default since 1.1.3, ~1 ms more; E ~1 ms cheaper, L ~1.8 ms more), Frame Generation
+~3 ms per rendered frame. Numbers vary with the scene, the render distance and whatever else runs on the PC.
 
 ## Troubleshooting
 
@@ -196,7 +194,7 @@ runs on the PC.
 
 ## Build from source (developers)
 
-Everything that is ours is in this repository. What is not ours is downloaded, never committed:
+The repository holds only our own code. These parts are downloaded and stay out of git:
 
 | Item | Where it goes | Source |
 |---|---|---|
