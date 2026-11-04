@@ -162,7 +162,7 @@ Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. W
   `configVersion=2`) + plain `vitrail-0.13.0-beta+mc26.3.jar`; surv and dlss-optimized also `viris-0.3.6+mc26.3.jar`,
   Voxy 0.2.20 and voxy-server-side (surv keeps an old `voxy-vulkan-0.1.0` as `.disabled`). Backups per step in each
   profile's `mods-backup-2026-11-0x-*/`. The user plays DLSS Optimized now (Complementary, render distance 24,
-  simulation 32, Custom 80 % + FG x2; its Unbound settings: clouds at 400/496, ATMOSPHERIC_FOG, BORDER_FOG off, LIGHTSHAFT_BEHAVIOUR=0, compiled in dev). `diagnosticRecording=false`; Lunar's active settings profile is `Default`.
+  simulation 32, Custom 80 % + FG x2; its Unbound settings: clouds at 400/496, ATMOSPHERIC_FOG, BORDER_FOG off, LIGHTSHAFT_BEHAVIOUR=0, compiled in dev). `diagnosticRecording=false`; Lunar's active settings profile is `Default`. 2026-11-04: dlss-optimized only has an unreleased build under the same jar name (`b9230da`, UI Recomposition; backup `mods-backup-2026-11-04-ui-recomposition/`), not started in Lunar by me.
 
 ## Build & test
 
