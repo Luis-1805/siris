@@ -142,8 +142,9 @@ JNIEXPORT jlong JNICALL Java_com_siris_DlssNative_present(JNIEnv* env, jclass, j
     if (!readImages(env, frame, &frameImage, 1)) {
         return -SIRIS_DEVICE_FAILED;
     }
-    SirisImage fgImages[3];
+    SirisImage fgImages[4];
     bool hasFgImages = readImages(env, frameGenImages, fgImages, 3);
+    bool hasUiAlpha = readImages(env, frameGenImages, fgImages, 4);
     float params[SIRIS_FG_PARAM_COUNT];
     bool hasParams = fgParams != nullptr && env->GetArrayLength(fgParams) >= SIRIS_FG_PARAM_COUNT;
     if (hasParams) {
@@ -152,7 +153,8 @@ JNIEXPORT jlong JNICALL Java_com_siris_DlssNative_present(JNIEnv* env, jclass, j
     uint64_t value = 0;
     int32_t status = siris_present(static_cast<uint64_t>(commandBuffer), &frameImage,
         hasFgImages ? &fgImages[0] : nullptr, hasFgImages ? &fgImages[1] : nullptr,
-        hasFgImages ? &fgImages[2] : nullptr, hasFgImages && hasParams ? params : nullptr, &value);
+        hasFgImages ? &fgImages[2] : nullptr, hasUiAlpha ? &fgImages[3] : nullptr,
+        hasFgImages && hasParams ? params : nullptr, &value);
     if (value == 0) {
         return -(status == SIRIS_OK ? SIRIS_DEVICE_FAILED : status);
     }

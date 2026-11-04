@@ -873,6 +873,7 @@ struct Presenter {
     // Frame generation (render thread).
     NVSDK_NGX_Handle* fg = nullptr;
     NVSDK_NGX_Parameter* fgParams = nullptr;
+    bool fgUiRecomposition = false;
     bool fgFailed = false;
     std::atomic<int> generatedWanted{1};  // generated frames per rendered one (siris_presenter_set_generated)
     int lastGeneratedCount = 0;           // of the last frame-generated present (render thread)
@@ -1695,7 +1696,7 @@ void releaseFrameGeneration() {
     g_present.fgFailed = false;
 }
 
-bool ensureFrameGeneration(VkCommandBuffer cmd) {
+bool ensureFrameGeneration(VkCommandBuffer cmd, bool uiRecomposition) {
     if (g_present.fg) {
         return true;
     }
@@ -1714,7 +1715,15 @@ bool ensureFrameGeneration(VkCommandBuffer cmd) {
     create.NativeBackbufferFormat = VK_FORMAT_R8G8B8A8_UNORM;
     create.RenderWidth = g_dlss.renderWidth;
     create.RenderHeight = g_dlss.renderHeight;
+    NVSDK_NGX_Parameter_SetI(g_present.fgParams, NVSDK_NGX_DLSSG_Parameter_UserInterfaceRecompositionEnabled,
+        uiRecomposition ? 1 : 0);
     result = NGX_VK_CREATE_DLSSG(cmd, 1, 1, &g_present.fg, g_present.fgParams, &create);
+    g_present.fgUiRecomposition = uiRecomposition && NVSDK_NGX_SUCCEED(result) && g_present.fg;
+    if (uiRecomposition && !g_present.fgUiRecomposition) {
+        // Frame generation matters more than this mode: without it, as before.
+        NVSDK_NGX_Parameter_SetI(g_present.fgParams, NVSDK_NGX_DLSSG_Parameter_UserInterfaceRecompositionEnabled, 0);
+        result = NGX_VK_CREATE_DLSSG(cmd, 1, 1, &g_present.fg, g_present.fgParams, &create);
+    }
     if (NVSDK_NGX_FAILED(result) || !g_present.fg) {
         int available = 0, initResult = 0;
         NVSDK_NGX_Parameter_GetI(g_vk.capabilities, NVSDK_NGX_Parameter_FrameGeneration_Available, &available);
@@ -1986,7 +1995,8 @@ SIRIS_API uint64_t siris_presenter_timeline() {
 }
 
 SIRIS_API int32_t siris_present(uint64_t commandBuffer, const SirisImage* frame, const SirisImage* depth,
-    const SirisImage* motion, const SirisImage* hudless, const float* fg, uint64_t* signalValue) {
+    const SirisImage* motion, const SirisImage* hudless, const SirisImage* uiAlpha, const float* fg,
+    uint64_t* signalValue) {
     *signalValue = 0;
     if (!g_present.thread.joinable()) {
         return fail(SIRIS_DEVICE_FAILED, "presenter not running");
@@ -2036,7 +2046,10 @@ SIRIS_API int32_t siris_present(uint64_t commandBuffer, const SirisImage* frame,
     auto cmd = reinterpret_cast<VkCommandBuffer>(commandBuffer);
     // Frame generation needs this frame's depth / motion vectors / hudless output at matching sizes.
     bool useFg = fg != nullptr && depth && motion && hudless && g_dlss.handle != nullptr
-        && hudless->width == g_present.width && hudless->height == g_present.height && ensureFrameGeneration(cmd);
+        && hudless->width == g_present.width && hudless->height == g_present.height && ensureFrameGeneration(cmd, uiAlpha != nullptr);
+    if (!useFg || !g_present.fgUiRecomposition) {
+        uiAlpha = nullptr;
+    }
     int generated = useFg ? g_present.generatedWanted.load() : 0;
     for (int i = 1; i < generated; i++) {
         // The slot is not busy: its images are free to create.
@@ -2069,6 +2082,9 @@ SIRIS_API int32_t siris_present(uint64_t commandBuffer, const SirisImage* frame,
             barrier(*motion, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL),
             barrier(*hudless, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL),
         };
+        if (uiAlpha) {
+            toEval.push_back(barrier(*uiAlpha, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+        }
         for (int i = 0; i < generated; i++) {
             toEval.push_back(barrier(slot.interp[i].image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_GENERAL));
@@ -2084,6 +2100,11 @@ SIRIS_API int32_t siris_present(uint64_t commandBuffer, const SirisImage* frame,
         eval.pDepth = &depthResource;
         eval.pMVecs = &motionResource;
         eval.pHudless = &hudlessResource;
+        NVSDK_NGX_Resource_VK uiAlphaResource{};
+        if (uiAlpha) {
+            uiAlphaResource = resource(*uiAlpha, false);
+            eval.pUIAlpha = &uiAlphaResource;
+        }
         NVSDK_NGX_DLSSG_Opt_Eval_Params opt{};
         std::memcpy(opt.cameraViewToClip, fg + SIRIS_FG_VIEW_TO_CLIP, sizeof(opt.cameraViewToClip));
         std::memcpy(opt.clipToCameraView, fg + SIRIS_FG_CLIP_TO_VIEW, sizeof(opt.clipToCameraView));
@@ -2126,6 +2147,9 @@ SIRIS_API int32_t siris_present(uint64_t commandBuffer, const SirisImage* frame,
             barrier(*hudless, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL),
             barrier(*frame, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL),
         };
+        if (uiAlpha) {
+            afterEval.push_back(barrier(*uiAlpha, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL));
+        }
         for (int i = 0; i < generated; i++) {
             afterEval.push_back(barrier(slot.interp[i].image, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_LAYOUT_GENERAL,
                 VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL));
@@ -2141,6 +2165,11 @@ SIRIS_API int32_t siris_present(uint64_t commandBuffer, const SirisImage* frame,
             std::swprintf(name, 64, L"fg_%03d_c_motion.png", g_capture.frame);
             captureImage(cmd, reinterpret_cast<VkImage>(motion->image), motion->width, motion->height, name,
                 VK_IMAGE_LAYOUT_GENERAL, true);
+            if (uiAlpha) {
+                std::swprintf(name, 64, L"fg_%03d_e_ui_alpha.png", g_capture.frame);
+                captureImage(cmd, reinterpret_cast<VkImage>(uiAlpha->image), uiAlpha->width, uiAlpha->height, name,
+                    VK_IMAGE_LAYOUT_GENERAL);
+            }
             std::swprintf(name, 64, L"fg_%03d_d_depth.txt", g_capture.frame);
             captureImage(cmd, reinterpret_cast<VkImage>(depth->image), depth->width, depth->height, name,
                 VK_IMAGE_LAYOUT_GENERAL, false, true, isDepthFormat(static_cast<VkFormat>(depth->format)));

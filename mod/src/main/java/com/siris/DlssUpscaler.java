@@ -205,6 +205,25 @@ public final class DlssUpscaler {
         }
         """;
 
+    // Before the GUI: alpha 0 everywhere, so the GUI's blending leaves its own opacity in the alpha channel.
+    private static final String CLEAR_ALPHA_SHADER = """
+        #version 330
+        layout(location = 0) out vec4 fragColor;
+        void main() {
+            fragColor = vec4(0.0);
+        }
+        """;
+
+    // After the GUI: its opacity as an image for DLSS-G's User Interface Recomposition (reads red).
+    private static final String UI_ALPHA_SHADER = """
+        #version 330
+        uniform sampler2D ColorSampler;
+        layout(location = 0) out vec4 fragColor;
+        void main() {
+            fragColor = vec4(vec3(texelFetch(ColorSampler, ivec2(gl_FragCoord.xy), 0).a), 1.0);
+        }
+        """;
+
     /** Our shaders, handed straight to RenderPearl's GLSL -> SPIR-V compiler. */
     private static final ShaderSource SHADERS = new ShaderSource() {
         @Override
@@ -214,6 +233,8 @@ public final class DlssUpscaler {
                 case NAMESPACE + ":motion_vectors" -> MOTION_SHADER;
                 case NAMESPACE + ":sharpen" -> SHARPEN_SHADER;
                 case NAMESPACE + ":icon_motion" -> ICON_MOTION_SHADER;
+                case NAMESPACE + ":clear_alpha" -> CLEAR_ALPHA_SHADER;
+                case NAMESPACE + ":ui_alpha" -> UI_ALPHA_SHADER;
                 default -> null;
             };
         }
@@ -243,12 +264,20 @@ public final class DlssUpscaler {
         BindGroupLayout.builder().withUniform("IconInfo", UniformType.UNIFORM_BUFFER).build(),
         new ColorTargetState(Optional.empty(), GpuFormat.RG16_FLOAT, ColorTargetState.WRITE_ALL));
     private static final int ICON_INFO_SIZE = iconInfoSize();
+    private static final RenderPipeline CLEAR_ALPHA_PIPELINE = fullscreenPipeline("clear_alpha",
+        BindGroupLayout.builder().build(),
+        new ColorTargetState(Optional.empty(), GpuFormat.RGBA8_UNORM, ColorTargetState.WRITE_ALPHA));
+    private static final RenderPipeline UI_ALPHA_PIPELINE = fullscreenPipeline("ui_alpha",
+        BindGroupLayout.builder().withUniform("ColorSampler", UniformType.COMBINED_IMAGE_SAMPLER).build(),
+        ColorTargetState.DEFAULT);
     private static final int SHARPEN_INFO_SIZE = new Std140SizeCalculator().putFloat().putIVec2().get();
 
     /** Dev option -Dsiris.debugLog=true: camera inputs of every upscaled frame. */
     private static final boolean DEBUG_LOG = Boolean.getBoolean("siris.debugLog");
     /** Dev option -Dsiris.bypass=true (DLAA only): show the raw rendered frame, no DLSS. */
     private static final boolean BYPASS = Boolean.getBoolean("siris.bypass");
+    /** Dev option -Dsiris.noUiRecomposition=true: DLSS-G finds the GUI by comparing with the hudless image alone. */
+    private static final boolean UI_RECOMPOSITION = !Boolean.getBoolean("siris.noUiRecomposition");
 
     private static boolean initialized;
     private static boolean failed;
@@ -268,6 +297,8 @@ public final class DlssUpscaler {
     private static CompiledRenderPipeline motionPipeline;
     private static CompiledRenderPipeline sharpenPipeline;
     private static CompiledRenderPipeline iconMotionPipeline;
+    private static CompiledRenderPipeline clearAlphaPipeline;
+    private static CompiledRenderPipeline uiAlphaPipeline;
     /** This frame's camera, kept for the icon motion pass after the GUI phase started. */
     private static final Matrix4f iconCurrent = new Matrix4f();
     private static final Matrix4f iconPrevious = new Matrix4f();
@@ -286,6 +317,9 @@ public final class DlssUpscaler {
     /** World depth with the hand on top (R32F), the depth DLSS and frame generation see. */
     private static GpuTexture combinedDepthTexture;
     private static GpuTextureView combinedDepthView;
+    /** The GUI's opacity for frame generation (red; RGBA8 so debug captures can write it). */
+    private static GpuTexture uiAlphaTexture;
+    private static GpuTextureView uiAlphaView;
 
     private static int jitterIndex;
     private static float jitterX;
@@ -385,6 +419,17 @@ public final class DlssUpscaler {
         }
         RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(full.getColorTexture(), outputTexture,
             0, 0, 0, 0, 0, outputWidth, outputHeight);
+        clearFrameAlpha(RenderSystem.getDevice().createCommandEncoder(), full.getColorTextureView());
+    }
+
+    private static void clearFrameAlpha(CommandEncoder encoder, GpuTextureView frame) {
+        if (!UI_RECOMPOSITION || clearAlphaPipeline == null || uiAlphaPipeline == null) {
+            return;
+        }
+        try (RenderPass pass = encoder.createRenderPass(() -> "DLSS clear alpha", frame, Optional.empty())) {
+            pass.setPipeline(clearAlphaPipeline);
+            pass.draw(3, 1, 0, 0);
+        }
     }
 
     /**
@@ -466,13 +511,24 @@ public final class DlssUpscaler {
         }
     }
 
-    /** Frame generation inputs of the last frame: depth, motion vectors, hudless output; or null. */
-    public static long[] frameGenImages() {
+    /** Frame generation inputs of the last frame: depth, motion vectors, hudless output, GUI opacity; or null. */
+    public static long[] frameGenImages(GpuTextureView frame) {
         if (outputView == null) {
             return null;
         }
-        return VulkanAccess.concat(VulkanAccess.describe(combinedDepthView), VulkanAccess.describe(motionView),
+        long[] images = VulkanAccess.concat(VulkanAccess.describe(combinedDepthView), VulkanAccess.describe(motionView),
             VulkanAccess.describe(outputView));
+        if (!UI_RECOMPOSITION || clearAlphaPipeline == null || uiAlphaPipeline == null
+            || frame.getWidth(0) != outputWidth || frame.getHeight(0) != outputHeight) {
+            return images;
+        }
+        CommandEncoder encoder = RenderSystem.getDevice().createCommandEncoder();
+        try (RenderPass pass = encoder.createRenderPass(() -> "DLSS UI alpha", uiAlphaView, Optional.empty())) {
+            pass.setPipeline(uiAlphaPipeline);
+            pass.setUniform("ColorSampler", frame, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+            pass.draw(3, 1, 0, 0);
+        }
+        return VulkanAccess.concat(images, VulkanAccess.describe(uiAlphaView));
     }
 
     /** This frame's frame generation inputs, or null (no world this frame, or a menu is open). */
@@ -548,6 +604,8 @@ public final class DlssUpscaler {
             motionPipeline = compile(MOTION_PIPELINE);
             sharpenPipeline = compile(SHARPEN_PIPELINE);
             iconMotionPipeline = compile(ICON_MOTION_PIPELINE);
+            clearAlphaPipeline = compile(CLEAR_ALPHA_PIPELINE);
+            uiAlphaPipeline = compile(UI_ALPHA_PIPELINE);
             if (motionPipeline == null || sharpenPipeline == null) {
                 disable("could not compile the motion vector / sharpening shaders");
                 return false;
@@ -590,6 +648,10 @@ public final class DlssUpscaler {
                 GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING | GpuTexture.USAGE_COPY_SRC,
                 GpuFormat.R32_FLOAT, renderWidth, renderHeight, 1, 1);
             combinedDepthView = RenderSystem.getDevice().createTextureView(combinedDepthTexture);
+            uiAlphaTexture = RenderSystem.getDevice().createTexture("DLSS UI alpha",
+                GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING | GpuTexture.USAGE_COPY_SRC,
+                GpuFormat.RGBA8_UNORM, outputWidth, outputHeight, 1, 1);
+            uiAlphaView = RenderSystem.getDevice().createTextureView(uiAlphaTexture);
             outputTexture = VulkanAccess.createStorageTexture("DLSS output", GpuTexture.USAGE_RENDER_ATTACHMENT
                 | GpuTexture.USAGE_TEXTURE_BINDING | GpuTexture.USAGE_COPY_SRC | GpuTexture.USAGE_COPY_DST,
                 GpuFormat.RGBA8_UNORM, outputWidth, outputHeight);
@@ -639,6 +701,10 @@ public final class DlssUpscaler {
         worldDepthTexture.close();
         combinedDepthView.close();
         combinedDepthTexture.close();
+        uiAlphaView.close();
+        uiAlphaTexture.close();
+        uiAlphaView = null;
+        uiAlphaTexture = null;
         worldDepthView = null;
         worldDepthTexture = null;
         combinedDepthView = null;
@@ -861,6 +927,9 @@ public final class DlssUpscaler {
                 }
             } else {
                 encoder.copyTextureToTexture(outputTexture, fullColor, 0, 0, 0, 0, 0, outputWidth, outputHeight);
+            }
+            if (VulkanPresenter.isRunning() && DlssConfig.frameGeneration) {
+                clearFrameAlpha(encoder, fullColorView);
             }
         }
 

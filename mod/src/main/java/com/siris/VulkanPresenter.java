@@ -93,7 +93,7 @@ public final class VulkanPresenter {
             DlssNative.setGeneratedFrames(DlssConfig.frameGenMode.factor - 1);
             DlssNative.setMonitorLimit(DlssConfig.fgMonitorLimit);
             fg = DlssUpscaler.takeFrameGenParams();
-            fgImages = fg != null ? DlssUpscaler.frameGenImages() : null;
+            fgImages = fg != null ? DlssUpscaler.frameGenImages(view) : null;
         }
         if (fgImages != null && (frameGeneratedPresents++ == CAPTURE_AT || captureRequested)) {
             captureRequested = false;

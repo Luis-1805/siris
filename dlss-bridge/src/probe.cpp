@@ -360,7 +360,7 @@ int wmain(int argc, wchar_t** argv) {
                 }
                 fgParams(params, rw, rh, w, h, i == 0);
                 uint64_t value = 0;
-                int32_t presented = siris_present(reinterpret_cast<uint64_t>(cmd), &o, &d, &m, &o, params, &value);
+                int32_t presented = siris_present(reinterpret_cast<uint64_t>(cmd), &o, &d, &m, &o, nullptr, params, &value);
                 if (presented != SIRIS_OK && failures++ < 3) {
                     std::printf("  present frame %d: %s\n", i, siris_last_message());
                 }

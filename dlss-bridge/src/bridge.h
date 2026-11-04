@@ -132,9 +132,11 @@ SIRIS_API uint64_t siris_presenter_timeline();
 // Records the copy of the finished frame (and, with fgParams and the three DLSS images, the DLSS-G
 // generated frame) into commandBuffer and queues it for the presenter thread. The caller signals
 // siris_presenter_timeline() with *signalValue in the same submission. Images are image-sized
-// like the presenter (frame, hudless) or render-sized (depth, motion).
+// like the presenter (frame, hudless, uiAlpha) or render-sized (depth, motion). uiAlpha (red = GUI opacity, may be
+// null) turns on DLSS-G's User Interface Recomposition.
 SIRIS_API int32_t siris_present(uint64_t commandBuffer, const SirisImage* frame, const SirisImage* depth,
-    const SirisImage* motion, const SirisImage* hudless, const float* fgParams, uint64_t* signalValue);
+    const SirisImage* motion, const SirisImage* hudless, const SirisImage* uiAlpha, const float* fgParams,
+    uint64_t* signalValue);
 
 // Debug: writes the generated and real frame of the next `frames` frame-generated presents as PNG files
 // into dir (fg_NNN_a_generated.png, fg_NNN_b_real.png).

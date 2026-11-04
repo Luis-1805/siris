@@ -122,6 +122,7 @@ apply immediately.
 | Model | M (second-generation transformer, default: cleanest with shader packs, ~1 ms more than K), K (transformer; turns shader pack noise such as light shafts into a fine grid), L (NVIDIA's default for Ultra Performance, most expensive), J (less ghosting), E (CNN, cheapest, grainier), driver default |
 | Sharpening | Robust contrast-adaptive sharpening (AMD FSR 1 RCAS) after DLSS, 0 – 100 %; holds back on fine repeating noise, so no grid on leaves or sand |
 | Frame Generation | Generated frames between rendered ones (RTX 40/50). Needs the presenter. Best with VSync and at least ~60 fps rendered without it. |
+| HUD in generated frames | The HUD's opacity goes to DLSS Frame Generation (User Interface Recomposition), so text and crosshair stay clean while the world moves |
 | Generated frames | 2x, 3x, 4x. Only what the GPU supports is offered: 3x / 4x (DLSS 4 multi frame generation) need an RTX 50; on RTX 40 the option shows 2x and is greyed out. |
 | DLSS presenter | Shows frames through its own swapchain (needed for Frame Generation, paces frames for low latency) |
 | Performance overlay | Off / FPS / Detailed, in the top left corner: fps shown and rendered, each with its 1 % low (last five seconds) |
