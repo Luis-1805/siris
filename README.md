@@ -152,7 +152,6 @@ Known with Solas 3.8 on Vitrail 0.13.0:
 * `SSAO=false`, or `DOF=true` together with `BLOOM=false`, make a program fail to compile, and Vitrail then
   draws nothing of the pack (Solas uses undeclared uniforms in code that Iris removes as unused, Vitrail
   doesn't). The log says `<program> did not compile, nothing of this pack will be drawn`.
-* At night the first-person hand is lit too brightly.
 
 Vitrail's own compatibility table: [docs/compatibility.md](https://github.com/avpbynf/Vitrail-Shaders/blob/main/docs/compatibility.md).
 
