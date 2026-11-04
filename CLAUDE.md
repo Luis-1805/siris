@@ -291,6 +291,10 @@ Newest first:
   v0.7.3/0.7.2: LunarCompat. v0.7.1: pacing without VSync, vertex buffer reuse. v0.7.0 (2026-10-27): first with
   Vitrail. v0.5.0/v0.6.0: old Iris fork era (notes start with an "Outdated" line).
 
+## Licensing (checked 2026-11-04, not legal advice)
+
+NVIDIA RTX SDKs license (`third_party/ngx/LICENSE.txt`) allows shipping the DLLs in the jar. MIT never covers them: `fabric.mod.json` lists both licenses, README says so and carries the attribution, no-endorsement line and a pointer to the guide's third-party notices (the guide asks for their full text; open: copy it in). No `logo=nvidia` badges: logos/marks need NVIDIA's written approval. `social-preview.png` still says "NVIDIA RTX" as text. Open, user's: Modrinth license field and page text, commercial notice if Modrinth monetization is on, written answer from NVIDIA (nvidia-rtx-license-questions@nvidia.com).
+
 ## Working with the user
 
 - Verify every change with screenshots/frame captures as above.

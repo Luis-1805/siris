@@ -3,7 +3,7 @@
   "id": "siris",
   "version": "${version}",
   "name": "SIRIS",
-  "description": "NVIDIA DLSS Super Resolution and Frame Generation for Minecraft 26.3, integrated with the game's Vulkan renderer and Vitrail shader packs.",
+  "description": "NVIDIA DLSS Super Resolution and Frame Generation for Minecraft 26.3, integrated with the game's Vulkan renderer and Vitrail shader packs. Uses the NVIDIA DLSS SDK. Not sponsored or endorsed by NVIDIA. NVIDIA is a trademark of NVIDIA Corporation.",
   "authors": [
     "laurensanp"
   ],
@@ -11,7 +11,7 @@
     "sources": "https://github.com/laurensanp/siris",
     "issues": "https://github.com/laurensanp/siris/issues"
   },
-  "license": "MIT",
+  "license": ["MIT", "LicenseRef-NVIDIA-RTX-SDKs"],
   "icon": "assets/siris/icon.png",
   "environment": "client",
   "entrypoints": {

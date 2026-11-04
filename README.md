@@ -7,8 +7,8 @@
 **Redefining Minecraft Rendering.**
 
 ![Vulkan](https://img.shields.io/badge/Vulkan-FF6A3D?logo=vulkan&logoColor=white)
-![NVIDIA DLSS](https://img.shields.io/badge/NVIDIA-DLSS-FF6A3D?logo=nvidia&logoColor=white)
-![Frame Generation](https://img.shields.io/badge/Frame-Generation-FF6A3D?logo=nvidia&logoColor=white)
+![DLSS](https://img.shields.io/badge/DLSS-Super%20Resolution-FF6A3D)
+![Frame Generation](https://img.shields.io/badge/Frame-Generation-FF6A3D)
 ![Vitrail](https://img.shields.io/badge/Vitrail-Shaders-FF6A3D?logoColor=white)
 
 </div>
@@ -309,7 +309,15 @@ submit signals a timeline semaphore ──────────────�
 
 ## License
 
-This mod: [MIT](LICENSE). NVIDIA's DLSS runtime files in the jar (`nvngx_dlss.dll`,
-`nvngx_dlssg.dll`) are redistributed under the NVIDIA DLSS SDK license (`NVIDIA_DLSS_LICENSE.txt` in the
-jar); `fetch-deps.ps1` downloads the SDK, it is not part of this repository. Vitrail (LGPL-3.0), Sodium
-and shader packs are not included; get them from their authors.
+The code in this repository: [MIT](LICENSE). The MIT license does not cover NVIDIA's DLSS runtime files in the
+jar (`nvngx_dlss.dll`, `nvngx_dlssg.dll`): they are NVIDIA's and redistributed under the NVIDIA RTX SDKs license
+(`natives/NVIDIA_DLSS_LICENSE.txt` in the jar). `fetch-deps.ps1` downloads the SDK, it is not part of this
+repository. Vitrail (LGPL-3.0), Sodium and shader packs are not included; get them from their authors.
+
+This mod uses the NVIDIA DLSS SDK. It is an independent project, not sponsored or endorsed by NVIDIA. NVIDIA and
+the NVIDIA logo are trademarks and/or registered trademarks of NVIDIA Corporation in the U.S. and other countries.
+DLSS runtime files: © NVIDIA Corporation. All rights reserved.
+
+The DLSS runtime includes third-party code. Its copyright and license notices are in sections 9.5 and 9.6 of NVIDIA's
+[DLSS Programming Guide](https://github.com/NVIDIA/DLSS/blob/main/doc/DLSS_Programming_Guide_Release.pdf): CURL,
+8x13 bitmap font, d3dx12.h, xml, npy, stb, DirectX-Graphics-Samples, Vulkan-Headers.
