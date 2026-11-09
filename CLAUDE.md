@@ -144,6 +144,13 @@ Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. W
   89-103 rendered, 1 % low 112-126 shown (was 98-108), worst join pause 446 ms (was 958/1658 ms), no errors.
   Not recommended for this setup: Nvidium (OpenGL only), AsyncParticles, Gnetum (HUD lag with FG), Ixeris,
   borderless-fullscreen mods (presenter), DH (LODs like Voxy).
+- Lunar profile `just-optimized` (2026-11-09): Voxygen 3.0.0 (`voxyworldgenv3`, LOD generator for Voxy) crashes the
+  integrated server with VMP (Very Many Players): both @Redirect `ChunkMap.isChunkTracked` in
+  `ChunkMap$TrackedEntity.updatePlayer`, Voxygen's fails ("Scanned 0 target(s)"). VMP is `.disabled` there. Without VMP
+  Voxygen runs (Lunar 5 min, dev: LODs drawn), but logs ~85-300 "chunk x,z failed: ReportedException: Exception
+  generating new chunk" per minute in dev (fresh world too, a feature asking for a chunk outside its region,
+  `LevelReader.getChunk`): Voxygen's own, not ours. Voxy SeedGen 0.3.1 (ARR, newest for 26.2) can't be ported cheaply:
+  26.3 rewrote density functions (`levelgen/densityfunction/`), 397 missing references in ~7400 lines.
 - Lunar Turbo Engine (2026-10-31): Lunar's remote feature flags (`settings/game/metadata_fallback.json` TurboEntities/
   TurboBlockEntities) switch on "Turbo Entity Mode"/"Turbo Block Entity Mode" (not shown in its settings screen): resting
   entities and block entities get baked into Lunar pipelines (`lunar_turbo`, `lunar_armor_cutout_no_cull_triangles`) that
