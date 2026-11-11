@@ -180,7 +180,9 @@ Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. W
 - Windows on Arm (2026-11-11, contributor's RTX Spark N1X, driver 621.14): `build.bat` builds for the machine's architecture
   (Arm64 uses DLSS SDK v310.9.16). An IMMEDIATE present carrying `VkPresentIdKHR` crashed in `nvogla64.dll` once the window
   filled the screen (every dev run at 3270x2180); present ids and present wait are FIFO-only now. A jar carries only the bridge
-  of the machine that built it.
+  of the machine that built it. x64 check (4060 Ti, 1080p fullscreen, FG x2, 1 run each): VSync unchanged (165 shown, 82
+  rendered); no VSync 283-307 shown / 140-158 rendered / 10.4-11.1 ms (main 273-280 / 134-142 / 11.8-12.2). Without VSync
+  `motion judder` now uses the hand-over time, not the on-screen time: not comparable with older no-VSync figures.
 - Test loop: `cd mod && gradlew runClient -PtestWorld=vulkan-test` joins/creates the world, screenshot
   `mod/run/screenshots/dlss-test.png` after 200 ticks, quits (`DevTest`, `DevTestWorldMixin`). Options:
   `-PtestCommands="time set 1500;weather clear;tp @p -36 84 18 -90 20"` (tree/shadow view; `tp @p -36 82 18 180 8`
