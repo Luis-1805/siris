@@ -229,6 +229,9 @@ Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. W
   clean. Inputs checked: MVs match the measured image shift (7.27 vs 7.3 render px), clipToPrevClip's depth column
   is (0,0,1,0) for a pure turn, camera vectors orthonormal/right-handed, FOV/aspect match. Pale tree "copies" in
   slow turns are real fogged trees (same in `-Dsiris.bypass=true` raw frames, DLAA only). All presets alike.
+  **Fixed 2026-11-11** by DLSS-G `mvecScale` 1 (PR #2): 4060 Ti, full model, x2, Complementary, beach view `tp @p -36 82 18
+  180 0`, spin 6 deg: generated frames sharp (main: trees/wall smeared), position 0.49-0.51 (main 0.47-0.49; 1.5 deg 0.50
+  both), fps unchanged. Measured per 64 px block (median shift of generated vs real); a global shift fails on parallax.
 - Dev: `-Dsiris.testShots=N` (N screenshots on consecutive ticks), `-Dsiris.bypass=true` (DLAA: raw frame
   instead of DLSS), `-Dsiris.debugSpin=deg` with `-PdlssDebug=still` (any spin speed), debugLog prints FG params.
 - Join hitch (Lunar `Pause - Unknown` 1.5 s + ~20 x 50-800 ms after joining): JFR showed Vitrail's
@@ -273,7 +276,7 @@ Goal: shader packs (Solas) + DLSS SR/FG on Vulkan, in the user's Lunar Client. W
   1 (render pixels), not 1/width as NGX's header suggests. With 1/width DLSS-G saw almost no motion; its optical-flow model
   hid that, but FG Lite (driver DLSS-FG Preset C) only cross-faded the real frames: x3 generated frames at 0.01 / 0.95 of the way
   (120 shown moved like 40), now 0.35 / 0.70. Check with `-PdlssDebug=spin` captures (`fg_NNN_a2_generated.png` etc. for x3/x4)
-  and the image shift between them. The old "FG smear at tree edges while turning" may come from the same thing: recheck.
+  and the image shift between them. It also fixed the old "FG smear at tree edges while turning" (checked on the 4060 Ti, see there).
 - Hardware: FG needs RTX 40/50; on the RTX 3070 dev machine FG fails with
   `NVSDK_NGX_Result_FAIL_UnableToInitializeFeature` (expected). `dlss-bridge/out/dlss_probe.exe` reports SR/FG.
 
