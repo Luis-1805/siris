@@ -294,7 +294,8 @@ waiting for review. New version: POST /v2/version multipart (`data` JSON + `file
 Gallery: 6 images.
 
 Newest first:
-- v1.2.0 (2026-11-09, Latest): DLSS-G UI Recomposition (HUD without ghosts in generated frames), NVIDIA license metadata. Modrinth SQLIZhSf.
+- v1.2.1 (2026-11-11, Latest): DLSS-G motion vectors in pixels (PR #2, MichaelMKenny): no FG smear on turns, x3/x4 move. Modrinth vNjHsXyG.
+- v1.2.0 (2026-11-09): DLSS-G UI Recomposition (HUD without ghosts in generated frames), NVIDIA license metadata. Modrinth SQLIZhSf.
 - v1.1.6 (2026-11-03): mobs keep the pack shader, presenter hardening, Limit to monitor. Modrinth pAtgPLdr.
 - v1.1.5 (2026-11-02): VIRIS split off, links and notes only; no change in the game. Modrinth oaAeAt6U.
 - v1.1.4 (2026-11-02): LODs keep colour on rejoin (join-reload skip off with VIRIS). Modrinth j6taTT1r.
